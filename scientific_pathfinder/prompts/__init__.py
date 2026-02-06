@@ -1,0 +1,23 @@
+"""
+Prompt templates for the Scientific Pathfinder agents.
+
+This module contains all system prompts and templates used by the agents.
+"""
+
+from .system_prompts import (
+    LIBRARIAN_SYSTEM_PROMPT,
+    CARTOGRAPHER_SYSTEM_PROMPT,
+    SCIENTIST_SYSTEM_PROMPT,
+    ENTITY_EXTRACTION_PROMPT_TEMPLATE,
+    GAP_ANALYSIS_PROMPT_TEMPLATE,
+    VALIDATION_SCRIPT_PROMPT_TEMPLATE
+)
+
+__all__ = [
+    'LIBRARIAN_SYSTEM_PROMPT',
+    'CARTOGRAPHER_SYSTEM_PROMPT',
+    'SCIENTIST_SYSTEM_PROMPT',
+    'ENTITY_EXTRACTION_PROMPT_TEMPLATE',
+    'GAP_ANALYSIS_PROMPT_TEMPLATE',
+    'VALIDATION_SCRIPT_PROMPT_TEMPLATE'
+]
