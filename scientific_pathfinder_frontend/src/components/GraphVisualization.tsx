@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, Play, Pause } from 'lucide-react';
 
 interface Node {
   id: string;
@@ -22,25 +22,39 @@ interface Props {
 
 export default function GraphVisualization({ sessionId, onClose }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [graphData, setGraphData] = useState<{ nodes: Node[]; links: Link[] } | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [simulationRunning, setSimulationRunning] = useState(true);
+  const zoomBehaviorRef = useRef<any>(null);
+  const simulationRef = useRef<any>(null);
 
   useEffect(() => {
     fetchGraphData();
   }, [sessionId]);
 
+  // Handle fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   const fetchGraphData = async () => {
     setLoading(true);
     try {
-      // Fetch graph data from backend
-      const response = await fetch(`http://localhost:8000/api/graph/data?session_id=${sessionId}`);
+      const response = await fetch(`http://localhost:8000/api/graph/${sessionId}`);
       const data = await response.json();
       setGraphData(data);
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch graph data:', error);
-      // Use mock data for demo
       setGraphData(generateMockGraph());
       setLoading(false);
     }
@@ -77,8 +91,8 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
   useEffect(() => {
     if (!graphData || !svgRef.current) return;
 
-    const width = 900;
-    const height = 600;
+    const width = isFullscreen ? window.innerWidth : 900;
+    const height = isFullscreen ? window.innerHeight - 100 : 600;
 
     // Clear previous graph
     d3.select(svgRef.current).selectAll('*').remove();
@@ -91,21 +105,23 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
     // Add zoom behavior
     const g = svg.append('g');
 
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 3])
+    const zoomBehavior = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 10])
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
+        setZoom(event.transform.k);
       });
 
-    svg.call(zoom as any);
+    svg.call(zoomBehavior as any);
+    zoomBehaviorRef.current = zoomBehavior;
 
     // Color scheme
     const colorMap: Record<string, string> = {
-      paper: '#3b82f6',    // blue
-      method: '#10b981',   // green
-      dataset: '#f59e0b',  // amber
-      metric: '#ef4444',   // red
-      author: '#8b5cf6',   // purple
+      paper: '#3b82f6',
+      method: '#10b981',
+      dataset: '#f59e0b',
+      metric: '#ef4444',
+      author: '#8b5cf6',
     };
 
     // Create a map of node IDs for quick lookup
@@ -126,10 +142,12 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
     const simulation = d3.forceSimulation(nodes as any)
       .force('link', d3.forceLink(links as any)
         .id((d: any) => d.id)
-        .distance(100))
-      .force('charge', d3.forceManyBody().strength(-300))
+        .distance(150))
+      .force('charge', d3.forceManyBody().strength(-400))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(30));
+      .force('collision', d3.forceCollide().radius(40));
+
+    simulationRef.current = simulation;
 
     // Create links
     const link = g.append('g')
@@ -145,13 +163,19 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
       .selectAll('circle')
       .data(nodes)
       .join('circle')
-      .attr('r', 12)
+      .attr('r', 15)
       .attr('fill', (d) => colorMap[d.type] || '#64748b')
       .attr('stroke', '#fff')
-      .attr('stroke-width', 2)
+      .attr('stroke-width', 3)
       .style('cursor', 'pointer')
       .on('click', (event, d) => {
         setSelectedNode(d as Node);
+      })
+      .on('mouseover', function() {
+        d3.select(this).attr('r', 18).attr('stroke-width', 4);
+      })
+      .on('mouseout', function() {
+        d3.select(this).attr('r', 15).attr('stroke-width', 3);
       })
       .call(d3.drag<any, any>()
         .on('start', dragStarted)
@@ -163,12 +187,14 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
       .selectAll('text')
       .data(nodes)
       .join('text')
-      .text((d) => d.label)
-      .attr('font-size', 10)
-      .attr('dx', 15)
+      .text((d) => d.label.length > 20 ? d.label.substring(0, 20) + '...' : d.label)
+      .attr('font-size', 12)
+      .attr('dx', 20)
       .attr('dy', 4)
-      .attr('fill', '#e2e8f0')
-      .style('pointer-events', 'none');
+      .attr('fill', '#f1f5f9')
+      .attr('font-weight', 500)
+      .style('pointer-events', 'none')
+      .style('user-select', 'none');
 
     // Update positions on simulation tick
     simulation.on('tick', () => {
@@ -204,19 +230,85 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
       event.subject.fy = null;
     }
 
-  }, [graphData]);
+    return () => {
+      simulation.stop();
+    };
+  }, [graphData, isFullscreen]);
+
+  const handleZoomIn = () => {
+    if (svgRef.current && zoomBehaviorRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.transition().duration(300).call(
+        zoomBehaviorRef.current.scaleBy,
+        1.3
+      );
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (svgRef.current && zoomBehaviorRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.transition().duration(300).call(
+        zoomBehaviorRef.current.scaleBy,
+        0.7
+      );
+    }
+  };
+
+  const handleReset = () => {
+    if (svgRef.current && zoomBehaviorRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.transition().duration(500).call(
+        zoomBehaviorRef.current.transform,
+        d3.zoomIdentity
+      );
+    }
+    if (simulationRef.current) {
+      simulationRef.current.alpha(1).restart();
+      setSimulationRunning(true);
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return;
+
+    try {
+      if (!isFullscreen) {
+        await containerRef.current.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error);
+    }
+  };
+
+  const toggleSimulation = () => {
+    if (simulationRef.current) {
+      if (simulationRunning) {
+        simulationRef.current.stop();
+        setSimulationRunning(false);
+      } else {
+        simulationRef.current.alpha(0.3).restart();
+        setSimulationRunning(true);
+      }
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-2xl border border-blue-500/20 max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div 
+      ref={containerRef}
+      className={`fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 ${isFullscreen ? 'p-0' : ''}`}
+    >
+      <div className={`bg-slate-900 rounded-2xl border border-blue-500/20 w-full max-h-[90vh] overflow-hidden flex flex-col ${isFullscreen ? 'max-w-full max-h-full rounded-none' : 'max-w-6xl'}`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-blue-500/20">
+        <div className="flex items-center justify-between p-6 border-b border-blue-500/20 bg-slate-900/95">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
               🗺️ Knowledge Graph Visualization
             </h2>
             <p className="text-sm text-blue-200/70 mt-1">
-              Interactive force-directed graph • Drag nodes • Click for details
+              {graphData ? `${graphData.nodes.length} nodes, ${graphData.links.length} relationships` : 'Loading...'}
             </p>
           </div>
           <button
@@ -228,54 +320,106 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
         </div>
 
         {/* Graph Container */}
-        <div className="flex-1 overflow-hidden relative">
+        <div className="flex-1 overflow-hidden relative bg-slate-950">
           {loading ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-blue-200">Loading graph data...</p>
+                <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-slate-400">Loading graph data...</p>
               </div>
             </div>
           ) : (
             <>
-              <div className="bg-slate-800/50 rounded-lg m-4 overflow-hidden">
-                <svg ref={svgRef} className="w-full" style={{ height: '600px' }} />
+              <svg ref={svgRef} className="w-full h-full"></svg>
+              
+              {/* Controls - Top Right */}
+              <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <button
+                  onClick={handleZoomIn}
+                  className="p-3 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors group"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="w-5 h-5 text-blue-200 group-hover:text-blue-100" />
+                </button>
+                <button
+                  onClick={handleZoomOut}
+                  className="p-3 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors group"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="w-5 h-5 text-blue-200 group-hover:text-blue-100" />
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="p-3 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors group"
+                  title="Reset View"
+                >
+                  <RotateCcw className="w-5 h-5 text-blue-200 group-hover:text-blue-100" />
+                </button>
+                <button
+                  onClick={toggleSimulation}
+                  className="p-3 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors group"
+                  title={simulationRunning ? "Pause Animation" : "Resume Animation"}
+                >
+                  {simulationRunning ? (
+                    <Pause className="w-5 h-5 text-blue-200 group-hover:text-blue-100" />
+                  ) : (
+                    <Play className="w-5 h-5 text-blue-200 group-hover:text-blue-100" />
+                  )}
+                </button>
+                <button
+                  onClick={toggleFullscreen}
+                  className="p-3 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors group"
+                  title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="w-5 h-5 text-blue-200 group-hover:text-blue-100" />
+                  ) : (
+                    <Maximize2 className="w-5 h-5 text-blue-200 group-hover:text-blue-100" />
+                  )}
+                </button>
               </div>
 
-              {/* Legend */}
+              {/* Legend - Top Left */}
               <div className="absolute top-4 left-4 bg-slate-800/90 backdrop-blur-sm rounded-lg p-4 border border-blue-500/20">
-                <h3 className="text-sm font-semibold text-white mb-2">Legend</h3>
-                <div className="space-y-1 text-xs">
+                <h3 className="text-sm font-semibold text-white mb-3">Legend</h3>
+                <div className="space-y-2 text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
-                    <span className="text-slate-300">Paper</span>
+                    <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                    <span className="text-slate-300">Papers</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                    <span className="text-slate-300">Method</span>
+                    <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                    <span className="text-slate-300">Methods</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-amber-500" />
-                    <span className="text-slate-300">Dataset</span>
+                    <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+                    <span className="text-slate-300">Datasets</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <span className="text-slate-300">Metric</span>
+                    <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                    <span className="text-slate-300">Metrics</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-purple-500"></div>
+                    <span className="text-slate-300">Authors</span>
                   </div>
                 </div>
               </div>
 
-              {/* Controls */}
-              <div className="absolute top-4 right-4 flex gap-2">
-                <button className="p-2 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors">
-                  <ZoomIn className="w-5 h-5 text-blue-200" />
-                </button>
-                <button className="p-2 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors">
-                  <ZoomOut className="w-5 h-5 text-blue-200" />
-                </button>
-                <button className="p-2 bg-slate-800/90 backdrop-blur-sm hover:bg-slate-700 rounded-lg border border-blue-500/20 transition-colors">
-                  <Maximize2 className="w-5 h-5 text-blue-200" />
-                </button>
+              {/* Zoom Level Indicator - Bottom Right */}
+              <div className="absolute bottom-4 right-4 bg-slate-800/90 backdrop-blur-sm rounded-lg px-4 py-2 border border-blue-500/20">
+                <p className="text-xs text-slate-400">
+                  Zoom: <span className="text-blue-200 font-mono">{(zoom * 100).toFixed(0)}%</span>
+                </p>
+              </div>
+
+              {/* Tips - Bottom Left */}
+              <div className="absolute bottom-4 left-4 bg-slate-800/90 backdrop-blur-sm rounded-lg p-3 text-xs text-slate-400 border border-blue-500/20 max-w-xs">
+                <p className="mb-1">💡 <strong className="text-slate-300">Tips:</strong></p>
+                <p>• Drag nodes to rearrange</p>
+                <p>• Scroll or pinch to zoom</p>
+                <p>• Click nodes for details</p>
+                <p>• Use controls to navigate</p>
               </div>
             </>
           )}
@@ -283,15 +427,24 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
 
         {/* Node Details */}
         {selectedNode && (
-          <div className="border-t border-blue-500/20 p-6 bg-slate-800/50">
+          <div className="border-t border-blue-500/20 p-6 bg-slate-800/50 max-h-48 overflow-y-auto">
             <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-white">{selectedNode.label}</h3>
-                <p className="text-sm text-blue-200/70 capitalize">Type: {selectedNode.type}</p>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white mb-1">{selectedNode.label}</h3>
+                <p className="text-sm text-blue-200/70 capitalize mb-2">Type: {selectedNode.type}</p>
+                {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 && (
+                  <div className="text-xs text-slate-400 space-y-1">
+                    {Object.entries(selectedNode.properties).slice(0, 3).map(([key, value]) => (
+                      <div key={key}>
+                        <span className="font-medium text-slate-300">{key}:</span> {String(value)}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>

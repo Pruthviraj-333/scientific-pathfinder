@@ -12,7 +12,8 @@ import logging
 import requests
 import time
 from typing import List, Dict, Any, Optional
-
+import tempfile
+import pathlib
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -283,8 +284,7 @@ class CodeExecutor:
             Path to saved file
         """
         # Use current directory or temp directory that works cross-platform
-        import tempfile
-        import pathlib
+        
         
         # Try current directory first
         try:

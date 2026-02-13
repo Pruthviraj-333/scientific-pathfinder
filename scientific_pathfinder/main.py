@@ -232,10 +232,9 @@ def main():
     
     # Example research topics (you can modify this)
     research_topics = [
-        "graph neural networks drug discovery", 
-        #"vision transformers for medical image classification",
-        # "reinforcement learning for robotics manipulation",
-        # "graph neural networks for drug discovery",
+        #"graph neural networks drug discovery", 
+        "vision transformers for medical image classification",
+        # "reinforcement learning for robotics manipulation"
     ]
     
     # Initialize the pathfinder
@@ -255,7 +254,7 @@ def main():
             
             final_state = pathfinder.run(
                 research_topic=topic,
-                max_papers=50,
+                max_papers=15,
                 save_script=True
             )
             

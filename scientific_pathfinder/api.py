@@ -431,6 +431,31 @@ async def start_research(request: ResearchRequest):
     """Start a new research analysis session."""
     session_id = str(uuid.uuid4())
     
+    # Auto-clear Neo4j database before starting new research
+    try:
+        logger.info("🗑️  Auto-clearing Neo4j database before new search...")
+        neo4j_uri = os.getenv("NEO4J_URI")
+        neo4j_user = os.getenv("NEO4J_USERNAME", "neo4j")
+        neo4j_pass = os.getenv("NEO4J_PASSWORD")
+        
+        if neo4j_uri and neo4j_pass:
+            db = Neo4jGraphDB(neo4j_uri, neo4j_user, neo4j_pass)
+            if db.connect():
+                with db.driver.session() as session:
+                    result = session.run("MATCH (n) DETACH DELETE n")
+                    summary = result.consume()
+                    nodes_deleted = summary.counters.nodes_deleted
+                    rels_deleted = summary.counters.relationships_deleted
+                db.close()
+                logger.info(f"✓ Database cleared: {nodes_deleted} nodes, {rels_deleted} relationships deleted")
+            else:
+                logger.warning("⚠️  Could not connect to Neo4j for auto-clear")
+        else:
+            logger.warning("⚠️  Neo4j credentials not found, skipping auto-clear")
+    except Exception as e:
+        logger.error(f"Failed to auto-clear database: {e}")
+        # Don't fail the request if clear fails, just log it
+    
     active_sessions[session_id] = {
         "topic": request.topic,
         "max_papers": request.max_papers,
@@ -453,6 +478,41 @@ async def get_research_status(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     return active_sessions[session_id]
+
+@app.post("/api/graph/clear")
+async def clear_graph():
+    """Clear all data from Neo4j database."""
+    try:
+        neo4j_uri = os.getenv("NEO4J_URI")
+        neo4j_user = os.getenv("NEO4J_USERNAME", "neo4j")
+        neo4j_pass = os.getenv("NEO4J_PASSWORD")
+        
+        if not neo4j_uri or not neo4j_pass:
+            raise HTTPException(status_code=503, detail="Neo4j not configured")
+        
+        db = Neo4jGraphDB(neo4j_uri, neo4j_user, neo4j_pass)
+        if not db.connect():
+            raise HTTPException(status_code=503, detail="Cannot connect to Neo4j")
+        
+        # Clear all data
+        with db.driver.session() as session:
+            result = session.run("MATCH (n) DETACH DELETE n")
+            summary = result.consume()
+        
+        db.close()
+        
+        logger.info("✓ Neo4j graph cleared - all nodes and relationships deleted")
+        
+        return {
+            "status": "success",
+            "message": "Database cleared successfully",
+            "nodes_deleted": summary.counters.nodes_deleted,
+            "relationships_deleted": summary.counters.relationships_deleted
+        }
+    
+    except Exception as e:
+        logger.error(f"Failed to clear graph: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/graph/{session_id}")
 async def get_graph_visualization(session_id: str):
