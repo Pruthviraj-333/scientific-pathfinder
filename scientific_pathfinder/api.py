@@ -14,20 +14,37 @@ import os
 from datetime import datetime
 import uuid
 from pathlib import Path
-
-# Load environment variables from parent directory
-from dotenv import load_dotenv
-env_path = Path(__file__).parent / '.env'
-load_dotenv(env_path)
-
-# Import your existing Scientific Pathfinder
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 
 from src.graph_db import Neo4jGraphDB
-from src.agents import LibrarianAgent, CartographerAgent, ScientistAgent
+# Load environment variables from parent directory
+from dotenv import load_dotenv
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
+
+env_path = Path(__file__).parent / '.env'
+load_dotenv(env_path)
+
+
+# Import autonomous agents (replacing standard agents)
+from src.autonomous_agents import (
+    AutonomousLibrarianAgent as LibrarianAgent,
+    AutonomousCartographerAgent as CartographerAgent,
+    AutonomousScientistAgent as ScientistAgent
+)
+
 from src.state import GraphState
 from langgraph.graph import StateGraph, END
+
+logger.info("🤖 Using AUTONOMOUS agents system")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -297,7 +314,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             "graph_stats": state.get("graph_stats", {}),
             "gaps": len(state.get("gaps_identified", [])),
             "hypothesis": state.get("final_hypothesis", ""),
-            "reasoning": state.get("reasoning", ""),
+            "reasoning": state.get("hypothesis_reasoning", "")  # Correct! ✅,
         }
         
         active_sessions[session_id]["result"] = result
@@ -431,31 +448,6 @@ async def start_research(request: ResearchRequest):
     """Start a new research analysis session."""
     session_id = str(uuid.uuid4())
     
-    # Auto-clear Neo4j database before starting new research
-    try:
-        logger.info("🗑️  Auto-clearing Neo4j database before new search...")
-        neo4j_uri = os.getenv("NEO4J_URI")
-        neo4j_user = os.getenv("NEO4J_USERNAME", "neo4j")
-        neo4j_pass = os.getenv("NEO4J_PASSWORD")
-        
-        if neo4j_uri and neo4j_pass:
-            db = Neo4jGraphDB(neo4j_uri, neo4j_user, neo4j_pass)
-            if db.connect():
-                with db.driver.session() as session:
-                    result = session.run("MATCH (n) DETACH DELETE n")
-                    summary = result.consume()
-                    nodes_deleted = summary.counters.nodes_deleted
-                    rels_deleted = summary.counters.relationships_deleted
-                db.close()
-                logger.info(f"✓ Database cleared: {nodes_deleted} nodes, {rels_deleted} relationships deleted")
-            else:
-                logger.warning("⚠️  Could not connect to Neo4j for auto-clear")
-        else:
-            logger.warning("⚠️  Neo4j credentials not found, skipping auto-clear")
-    except Exception as e:
-        logger.error(f"Failed to auto-clear database: {e}")
-        # Don't fail the request if clear fails, just log it
-    
     active_sessions[session_id] = {
         "topic": request.topic,
         "max_papers": request.max_papers,
@@ -479,40 +471,8 @@ async def get_research_status(session_id: str):
     
     return active_sessions[session_id]
 
-@app.post("/api/graph/clear")
-async def clear_graph():
-    """Clear all data from Neo4j database."""
-    try:
-        neo4j_uri = os.getenv("NEO4J_URI")
-        neo4j_user = os.getenv("NEO4J_USERNAME", "neo4j")
-        neo4j_pass = os.getenv("NEO4J_PASSWORD")
-        
-        if not neo4j_uri or not neo4j_pass:
-            raise HTTPException(status_code=503, detail="Neo4j not configured")
-        
-        db = Neo4jGraphDB(neo4j_uri, neo4j_user, neo4j_pass)
-        if not db.connect():
-            raise HTTPException(status_code=503, detail="Cannot connect to Neo4j")
-        
-        # Clear all data
-        with db.driver.session() as session:
-            result = session.run("MATCH (n) DETACH DELETE n")
-            summary = result.consume()
-        
-        db.close()
-        
-        logger.info("✓ Neo4j graph cleared - all nodes and relationships deleted")
-        
-        return {
-            "status": "success",
-            "message": "Database cleared successfully",
-            "nodes_deleted": summary.counters.nodes_deleted,
-            "relationships_deleted": summary.counters.relationships_deleted
-        }
-    
-    except Exception as e:
-        logger.error(f"Failed to clear graph: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+
+# Add this endpoint to your api.py after get_research_status
 
 @app.get("/api/graph/{session_id}")
 async def get_graph_visualization(session_id: str):
@@ -592,69 +552,6 @@ async def get_graph_visualization(session_id: str):
     except Exception as e:
         logger.error(f"Failed to get graph data: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/graph/data")
-async def get_graph_data(session_id: Optional[str] = None):
-    """Get graph data for D3.js visualization."""
-    try:
-        neo4j_uri = os.getenv("NEO4J_URI")
-        neo4j_user = os.getenv("NEO4J_USERNAME", "neo4j")
-        neo4j_pass = os.getenv("NEO4J_PASSWORD")
-        
-        if not neo4j_uri or not neo4j_pass:
-            raise HTTPException(status_code=503, detail="Neo4j not configured")
-        
-        db = Neo4jGraphDB(neo4j_uri, neo4j_user, neo4j_pass)
-        if not db.connect():
-            raise HTTPException(status_code=503, detail="Cannot connect to Neo4j")
-        
-        # Query for graph data
-        with db.driver.session() as session_db:
-            # Get nodes (limit for performance)
-            nodes_query = """
-            MATCH (n)
-            WHERE n:Paper OR n:Method OR n:Dataset OR n:Metric
-            RETURN id(n) as id, labels(n)[0] as type, 
-                   COALESCE(n.title, n.name) as label,
-                   properties(n) as properties
-            LIMIT 100
-            """
-            nodes_result = session_db.run(nodes_query)
-            nodes = []
-            for record in nodes_result:
-                nodes.append({
-                    "id": str(record["id"]),
-                    "label": (record["label"][:50] + "...") if len(record["label"]) > 50 else record["label"],
-                    "type": record["type"].lower(),
-                    "properties": dict(record["properties"])
-                })
-            
-            # Get relationships
-            links_query = """
-            MATCH (a)-[r]->(b)
-            WHERE (a:Paper OR a:Method OR a:Dataset OR a:Metric)
-              AND (b:Paper OR b:Method OR b:Dataset OR b:Metric)
-            RETURN id(a) as source, id(b) as target, type(r) as type
-            LIMIT 200
-            """
-            links_result = session_db.run(links_query)
-            links = []
-            for record in links_result:
-                links.append({
-                    "source": str(record["source"]),
-                    "target": str(record["target"]),
-                    "type": record["type"]
-                })
-        
-        db.close()
-        
-        return {"nodes": nodes, "links": links}
-    
-    except Exception as e:
-        logger.error(f"Failed to get graph data: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
@@ -738,7 +635,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         
         for event in pathfinder.stream(state):
             for node_name, node_output in event.items():
-                state.update(node_output)
+                state.update(node_output) 
                 await manager.send_message(session_id, {
                     "type": "progress",
                     "step": node_name,
@@ -769,10 +666,6 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                     })
         
         # Send final result
-        logger.info(f"Final state keys: {list(state.keys())}")
-        logger.info(f"Papers found: {len(state.get('papers_found', []))}")
-        logger.info(f"Hypothesis length: {len(state.get('final_hypothesis', ''))}")
-
         result = {
             "session_id": session_id,
             "topic": session["topic"],
@@ -780,10 +673,8 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             "graph_stats": state.get("graph_stats", {}),
             "gaps": len(state.get("gaps_identified", [])),
             "hypothesis": state.get("final_hypothesis", ""),
-            "reasoning": state.get("hypothesis_reasoning", ""),  # FIX: Changed from 'reasoning'
+            "reasoning": state.get("reasoning", ""),
         }
-
-        logger.info(f"Sending result - Papers: {result['papers']}, Hypothesis: {len(result['hypothesis'])} chars")
         
         active_sessions[session_id]["result"] = result
         active_sessions[session_id]["status"] = "completed"
