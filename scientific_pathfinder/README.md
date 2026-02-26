@@ -1,4 +1,4 @@
-# 🔬 Scientific Pathfinder
+#  Scientific Pathfinder
 
 > An autonomous research agent that discovers hidden connections in scientific literature using Knowledge Graphs and LLMs.
 
@@ -325,9 +325,6 @@ Contributions are welcome! Areas for improvement:
 - Hypothesis validation pipeline
 - Web interface for exploration
 
-## 📄 License
-
-MIT License - see LICENSE file for details
 
 ## 🙏 Acknowledgments
 
