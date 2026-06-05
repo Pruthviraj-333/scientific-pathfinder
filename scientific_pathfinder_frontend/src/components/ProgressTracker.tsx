@@ -33,16 +33,16 @@ export default function ProgressTracker({ session, onComplete }: any) {
       } else if (data.type === 'complete') {
         setCurrentStep('complete'); // Set to complete
         session.result = data.data;
-        setMessages(prev => [...prev, '✅ Research complete!']);
+        setMessages(prev => [...prev, 'Research complete!']);
         onComplete();
       } else if (data.type === 'error') {
-        setMessages(prev => [...prev, `❌ Error: ${data.message}`]);
+        setMessages(prev => [...prev, `Error: ${data.message}`]);
       }
     };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setMessages(prev => [...prev, '❌ WebSocket connection error']);
+      setMessages(prev => [...prev, 'WebSocket connection error']);
     };
 
     ws.onclose = () => {
@@ -55,7 +55,7 @@ export default function ProgressTracker({ session, onComplete }: any) {
   return (
     <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-blue-500/20 p-8">
       <h2 className="text-2xl font-bold text-white mb-6">
-        ⚡ Research in Progress
+        Research in Progress
       </h2>
 
       {/* Progress Steps */}

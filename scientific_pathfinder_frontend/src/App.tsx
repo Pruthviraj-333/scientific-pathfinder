@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FlaskConical, RefreshCw } from 'lucide-react';
 import SearchInterface from './components/SearchInterface';
 import ProgressTracker from './components/ProgressTracker';
 import ResultsDisplay from './components/ResultsDisplay';
@@ -19,7 +20,7 @@ function App() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                <span className="text-4xl">🔬</span>
+                <FlaskConical className="w-8 h-8 text-blue-400" />
                 Scientific Pathfinder
               </h1>
               <p className="mt-1 text-blue-200/70">
@@ -74,9 +75,10 @@ function App() {
                 setSession(null);
                 setIsProcessing(false);
               }}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              🔄 Start New Research
+              <RefreshCw className="w-4 h-4" />
+              Start New Research
             </button>
           </div>
         )}

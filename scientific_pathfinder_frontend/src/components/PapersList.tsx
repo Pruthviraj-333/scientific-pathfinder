@@ -38,7 +38,7 @@ export default function PapersList({ papers }: Props) {
       <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-blue-500/20 p-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            📚 Analyzed Papers ({papers.length})
+            Analyzed Papers ({papers.length})
           </h2>
           <select
             value={sortBy}

@@ -33,7 +33,7 @@ export default function SearchInterface({ onSessionStart }: Props) {
     <div className="max-w-2xl mx-auto">
       <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-blue-500/20 p-8">
         <h2 className="text-2xl font-bold text-white mb-6">
-          🔍 Start Your Research
+          Start Your Research
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -71,7 +71,7 @@ export default function SearchInterface({ onSessionStart }: Props) {
 
           {error && (
             <div className="p-4 bg-red-950/40 border border-red-500/20 text-red-200 text-sm rounded-lg">
-              ❌ {error}
+              {error}
             </div>
           )}
 
@@ -96,7 +96,7 @@ export default function SearchInterface({ onSessionStart }: Props) {
 
         <div className="mt-6 p-4 bg-blue-900/20 rounded-lg">
           <p className="text-sm text-blue-200/70">
-            💡 <strong>Tip:</strong> Be specific! "vision transformers medical imaging" is better than just "AI"
+            <strong>Tip:</strong> Be specific! "vision transformers medical imaging" is better than just "AI"
           </p>
         </div>
       </div>

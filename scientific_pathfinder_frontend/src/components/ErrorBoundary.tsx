@@ -95,7 +95,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
             <div className="mt-6 p-4 bg-blue-900/20 rounded-lg">
               <p className="text-sm text-blue-200">
-                💡 <strong>Tip:</strong> If this error persists, try clearing your browser cache or 
+                <strong>Tip:</strong> If this error persists, try clearing your browser cache or 
                 checking the browser console for more details.
               </p>
             </div>

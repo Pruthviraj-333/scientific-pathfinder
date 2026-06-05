@@ -95,7 +95,7 @@ export default function PaperDetailsModal({ paper, onClose }: Props) {
               {paper.entities.methods && paper.entities.methods.length > 0 && (
                 <div className="bg-slate-800/30 rounded-lg p-4 border border-green-500/20">
                   <h4 className="text-sm font-semibold text-green-400 mb-2">
-                    🔬 Methods ({paper.entities.methods.length})
+                    Methods ({paper.entities.methods.length})
                   </h4>
                   <div className="space-y-1">
                     {paper.entities.methods.slice(0, 5).map((method, idx) => (
@@ -116,7 +116,7 @@ export default function PaperDetailsModal({ paper, onClose }: Props) {
               {paper.entities.datasets && paper.entities.datasets.length > 0 && (
                 <div className="bg-slate-800/30 rounded-lg p-4 border border-amber-500/20">
                   <h4 className="text-sm font-semibold text-amber-400 mb-2">
-                    📊 Datasets ({paper.entities.datasets.length})
+                    Datasets ({paper.entities.datasets.length})
                   </h4>
                   <div className="space-y-1">
                     {paper.entities.datasets.slice(0, 5).map((dataset, idx) => (
@@ -137,7 +137,7 @@ export default function PaperDetailsModal({ paper, onClose }: Props) {
               {paper.entities.metrics && paper.entities.metrics.length > 0 && (
                 <div className="bg-slate-800/30 rounded-lg p-4 border border-red-500/20">
                   <h4 className="text-sm font-semibold text-red-400 mb-2">
-                    📈 Metrics ({paper.entities.metrics.length})
+                    Metrics ({paper.entities.metrics.length})
                   </h4>
                   <div className="space-y-1">
                     {paper.entities.metrics.slice(0, 5).map((metric, idx) => (

@@ -305,7 +305,7 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
         <div className="flex items-center justify-between p-6 border-b border-blue-500/20 bg-slate-900/95">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              🗺️ Knowledge Graph Visualization
+              Knowledge Graph Visualization
             </h2>
             <p className="text-sm text-blue-200/70 mt-1">
               {graphData ? `${graphData.nodes.length} nodes, ${graphData.links.length} relationships` : 'Loading...'}
@@ -417,7 +417,7 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
 
               {/* Tips - Bottom Left */}
               <div className="absolute bottom-4 left-4 bg-slate-800/90 backdrop-blur-sm rounded-lg p-3 text-xs text-slate-400 border border-blue-500/20 max-w-xs">
-                <p className="mb-1">💡 <strong className="text-slate-300">Tips:</strong></p>
+                <p className="mb-1"><strong className="text-slate-300">Tips:</strong></p>
                 <p>• Drag nodes to rearrange</p>
                 <p>• Scroll or pinch to zoom</p>
                 <p>• Click nodes for details</p>
