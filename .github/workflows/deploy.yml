@@ -1,0 +1,95 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/backend
+  FRONTEND_IMAGE: ${{ github.repository }}/frontend
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════
+  #  Build & Push Docker Images
+  # ═══════════════════════════════════════════════════════════════════
+  build-and-push:
+    name: "Build & Push Images"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "TAG=sha-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./scientific_pathfinder
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ steps.tag.outputs.TAG }}
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./scientific_pathfinder_frontend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ steps.tag.outputs.TAG }}
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL || 'https://api.example.com' }}
+
+  # ═══════════════════════════════════════════════════════════════════
+  #  Deploy (placeholder — configure for your platform)
+  # ═══════════════════════════════════════════════════════════════════
+  deploy:
+    name: "Deploy to ${{ github.event.inputs.environment || 'staging' }}"
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy notification
+        run: |
+          echo "============================================"
+          echo " Deployment ready!"
+          echo " Environment: ${{ github.event.inputs.environment || 'staging' }}"
+          echo " Backend:  ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest"
+          echo " Frontend: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest"
+          echo "============================================"
+          echo ""
+          echo "To deploy manually with Docker Compose:"
+          echo "  docker compose -f docker-compose.prod.yml pull"
+          echo "  docker compose -f docker-compose.prod.yml up -d"
+          echo ""
+          echo "For Render/Railway: configure auto-deploy from this registry."

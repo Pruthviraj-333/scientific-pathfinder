@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
+import { startResearch } from '../services/api';
 
 interface Props {
   onSessionStart: (session: any) => void;
@@ -9,23 +10,20 @@ export default function SearchInterface({ onSessionStart }: Props) {
   const [topic, setTopic] = useState('');
   const [maxPapers, setMaxPapers] = useState(10);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/research/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, max_papers: maxPapers }),
-      });
-
-      const data = await response.json();
+      const data = await startResearch(topic, maxPapers);
       onSessionStart({ ...data, topic, max_papers: maxPapers });
-    } catch (error) {
-      console.error('Failed to start research:', error);
-      alert('Failed to connect to backend. Make sure it\'s running on port 8000');
+    } catch (err: any) {
+      console.error('Failed to start research:', err);
+      const msg = err?.message || 'Failed to connect to backend. Check that the API is running.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -70,6 +68,12 @@ export default function SearchInterface({ onSessionStart }: Props) {
               <span>50</span>
             </div>
           </div>
+
+          {error && (
+            <div className="p-4 bg-red-950/40 border border-red-500/20 text-red-200 text-sm rounded-lg">
+              ❌ {error}
+            </div>
+          )}
 
           <button
             type="submit"

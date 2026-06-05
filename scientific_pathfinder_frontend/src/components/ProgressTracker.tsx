@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Loader, Circle } from 'lucide-react';
+import config from '../config';
 
 const STEPS = [
   { id: 'librarian', label: 'Librarian', desc: 'Searching papers' },
@@ -13,7 +14,7 @@ export default function ProgressTracker({ session, onComplete }: any) {
   const [messages, setMessages] = useState<string[]>([]);
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:8000/ws/${session.session_id}`);
+    const ws = new WebSocket(config.ws(`/ws/${session.session_id}`));
 
     ws.onopen = () => {
       console.log('WebSocket connected');

@@ -1,4 +1,3 @@
-import { Loader } from 'lucide-react';
 
 interface LoadingSpinnerProps {
   message?: string;

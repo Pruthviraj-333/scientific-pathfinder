@@ -1,7 +1,6 @@
 import { Download, ExternalLink, Network, FileJson, FileText, Share2, Copy, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import GraphVisualization from './GraphVisualization';
-import PapersList from './PapersList';
 
 export default function ResultsDisplay({ result, sessionId }: any) {
   const [showGraph, setShowGraph] = useState(false);

@@ -1,42 +1,36 @@
-# Core AI/ML Libraries
-langchain>=0.1.0
-langchain-core>=0.1.0
-langchain-groq>=0.1.0
-langgraph>=0.0.40
+# ============================================================================
+# Scientific Pathfinder — Python Dependencies
+# ============================================================================
 
-# Neo4j Database Driver
-neo4j>=5.14.0
+# ── Core AI/ML ──────────────────────────────────────────────────────────
+langchain>=0.1.0,<0.4.0
+langchain-core>=0.1.0,<0.4.0
+langchain-groq>=0.1.0,<0.3.0
+langgraph>=0.0.40,<1.0.0
 
-# Semantic Scholar API
-# Note: Package is called 'semanticscholar' on PyPI
-# Install with: pip install semanticscholar
-# If not available, use requests directly
-# semanticscholar>=0.3.0
+# ── Database ────────────────────────────────────────────────────────────
+neo4j>=5.14.0,<6.0.0
 
-# Utility Libraries
-python-dotenv>=1.0.0
-pydantic>=2.0.0
+# ── Web Framework ──────────────────────────────────────────────────────
+fastapi>=0.104.0,<1.0.0
+uvicorn[standard]>=0.24.0,<1.0.0
+websockets>=12.0,<14.0
+
+# ── Configuration & Validation ──────────────────────────────────────────
+python-dotenv>=1.0.0,<2.0.0
+pydantic>=2.0.0,<3.0.0
+pydantic-settings>=2.0.0,<3.0.0
+
+# ── HTTP Client ─────────────────────────────────────────────────────────
+requests>=2.31.0,<3.0.0
+
+# ── Logging ─────────────────────────────────────────────────────────────
+python-json-logger>=2.0.0,<3.0.0
+
+# ── Type Extensions ─────────────────────────────────────────────────────
 typing-extensions>=4.0.0
-requests>=2.31.0
 
-# Optional: For better JSON handling
-# orjson>=3.9.0
-
-# Optional: For progress tracking
-# tqdm>=4.66.0
-
-# FastAPI Backend Dependencies
-
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-websockets>=12.0
-python-dotenv>=1.0.0
-pydantic>=2.0.0
-
-# Existing dependencies (already in main requirements.txt)
-# langchain>=0.1.0
-# langchain-core>=0.1.0
-# langchain-groq>=0.1.0
-# langgraph>=0.0.40
-# neo4j>=5.14.0
-# requests>=2.31.0
+# ── Testing (dev only) ─────────────────────────────────────────────────
+pytest>=7.0.0,<9.0.0
+pytest-asyncio>=0.21.0,<1.0.0
+httpx>=0.24.0,<1.0.0

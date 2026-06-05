@@ -14,7 +14,6 @@ import time
 from typing import List, Dict, Any, Optional
 import tempfile
 import pathlib
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -33,11 +32,42 @@ class SemanticScholarTool:
             api_key: Optional API key for higher rate limits
         """
         self.api_key = api_key or os.getenv("SEMANTIC_SCHOLAR_API_KEY")
+        if self.api_key:
+            self.api_key = self.api_key.strip('"\'')
         self.session = requests.Session()
         if self.api_key:
             self.session.headers.update({"x-api-key": self.api_key})
         self.session.headers.update({"User-Agent": "ScientificPathfinder/1.0"})
         logger.info("✓ Semantic Scholar client initialized")
+        
+    def _make_request(self, url: str, params: Optional[Dict] = None) -> requests.Response:
+        """Helper to make HTTP GET requests with exponential backoff on 429 rate limit."""
+        max_retries = 5
+        backoff = 4.0
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(url, params=params, timeout=30)
+                if response.status_code == 429:
+                    if attempt < max_retries - 1:
+                        sleep_time = backoff * (2.0 ** attempt)
+                        logger.warning(f"⚠ Semantic Scholar rate limit hit (429). Retrying in {sleep_time:.1f}s (attempt {attempt + 1}/{max_retries})...")
+                        time.sleep(sleep_time)
+                        continue
+                response.raise_for_status()
+                return response
+            except requests.exceptions.RequestException as e:
+                # If it's a 429 status inside an exception, retry it
+                if e.response is not None and e.response.status_code == 429:
+                    if attempt < max_retries - 1:
+                        sleep_time = backoff * (2.0 ** attempt)
+                        logger.warning(f"⚠ Semantic Scholar rate limit hit (429 exception). Retrying in {sleep_time:.1f}s...")
+                        time.sleep(sleep_time)
+                        continue
+                raise e
+        
+        # If we exhausted retries and still get 429, raise it
+        raise requests.exceptions.HTTPError("Exhausted retries for Semantic Scholar 429 Rate Limit")
     
     def search_papers(
         self, 
@@ -69,9 +99,8 @@ class SemanticScholarTool:
                 'fields': 'paperId,title,abstract,year,authors,citationCount,url,venue,publicationDate'
             }
             
-            # Make request
-            response = self.session.get(url, params=params, timeout=30)
-            response.raise_for_status()
+            # Make request with retry helper
+            response = self._make_request(url, params=params)
             
             data = response.json()
             results = data.get('data', [])
@@ -111,7 +140,10 @@ class SemanticScholarTool:
             
         except requests.exceptions.RequestException as e:
             error_msg = str(e).lower()
-            if '429' in error_msg or 'rate limit' in error_msg:
+            if '403' in error_msg or 'forbidden' in error_msg:
+                logger.error(f"✗ Semantic Scholar API key is invalid or not activated (403 Forbidden)")
+                logger.error(f"   Please check SEMANTIC_SCHOLAR_API_KEY in .env or clear it to use rate-limited public access.")
+            elif '429' in error_msg or 'rate limit' in error_msg or 'exhausted retries' in error_msg:
                 logger.error(f"✗ Semantic Scholar rate limit exceeded")
                 logger.error(f"   Solutions:")
                 logger.error(f"   1. Wait 60 seconds and try again")
@@ -140,8 +172,7 @@ class SemanticScholarTool:
                 'fields': 'paperId,title,abstract,year,authors,citationCount,url,venue,referenceCount,citationCount'
             }
             
-            response = self.session.get(url, params=params, timeout=30)
-            response.raise_for_status()
+            response = self._make_request(url, params=params)
             
             paper = response.json()
             
@@ -166,7 +197,7 @@ class SemanticScholarTool:
             }
             
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
+            if e.response is not None and e.response.status_code == 404:
                 logger.warning(f"Paper {paper_id} not found")
             else:
                 logger.error(f"Error fetching paper {paper_id}: {e}")

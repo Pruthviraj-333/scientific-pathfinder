@@ -14,7 +14,6 @@ from typing import Dict, List, Any, Optional
 from neo4j import GraphDatabase, exceptions
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -50,37 +49,49 @@ class Neo4jGraphDB:
         if uri.endswith("/neo4j"):
             uri = uri.rstrip("/neo4j")
         
-        # If using bolt:// (plain), we need to enable encryption manually with SSL context
+        # If using bolt://, we attempt standard plain connection first (no encryption)
         if uri.startswith("bolt://"):
-            logger.info(f"Detected bolt:// URI, using encrypted connection with SSL workaround...")
-            
+            logger.info(f"Detected bolt:// URI, attempting plain connection to {uri}...")
             try:
-                # Create SSL context that doesn't verify certificates
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-                
                 self.driver = GraphDatabase.driver(
                     uri,
                     auth=(self.username, self.password),
-                    encrypted=True,  # Enable encryption
-                    ssl_context=ssl_context,  # Custom SSL context
                     max_connection_lifetime=3600,
                     max_connection_pool_size=50
                 )
-                
                 # Test connection
                 with self.driver.session() as session:
                     session.run("RETURN 1").consume()
-                
-                logger.info(f"✓ Connected to Neo4j at {uri}")
-                logger.info(f"  Using SSL workaround for Windows certificate issues")
+                logger.info(f"✓ Connected to Neo4j at {uri} (unencrypted)")
                 return True
-                
             except Exception as e:
-                logger.error(f"✗ Failed to connect with bolt:// + SSL: {e}")
-                self.driver = None
-                return False
+                logger.warning(f"⚠ Plain connection to {uri} failed: {e}. Trying SSL workaround in case of remote host...")
+                
+                try:
+                    # Create SSL context that doesn't verify certificates
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.check_hostname = False
+                    ssl_context.verify_mode = ssl.CERT_NONE
+                    
+                    self.driver = GraphDatabase.driver(
+                        uri,
+                        auth=(self.username, self.password),
+                        encrypted=True,  # Enable encryption
+                        ssl_context=ssl_context,  # Custom SSL context
+                        max_connection_lifetime=3600,
+                        max_connection_pool_size=50
+                    )
+                    
+                    # Test connection
+                    with self.driver.session() as session:
+                        session.run("RETURN 1").consume()
+                    
+                    logger.info(f"✓ Connected to Neo4j at {uri} (SSL workaround)")
+                    return True
+                except Exception as ssl_e:
+                    logger.error(f"✗ Failed to connect to Neo4j via {uri}: {ssl_e}")
+                    self.driver = None
+                    return False
         
         # For neo4j+s:// or bolt+s://, try standard connection first
         try:

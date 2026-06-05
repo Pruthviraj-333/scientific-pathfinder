@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { X, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, Play, Pause } from 'lucide-react';
+import { getGraphData } from '../services/api';
 
 interface Node {
   id: string;
@@ -49,8 +50,7 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
   const fetchGraphData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/graph/${sessionId}`);
-      const data = await response.json();
+      const data = (await getGraphData(sessionId)) as { nodes: Node[]; links: Link[] };
       setGraphData(data);
       setLoading(false);
     } catch (error) {
@@ -127,10 +127,10 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
     // Create a map of node IDs for quick lookup
     const nodeById = new Map(graphData.nodes.map(d => [d.id, d]));
     
-    // Filter out links that reference non-existent nodes
+     // Filter out links that reference non-existent nodes
     const validLinks = graphData.links.filter(link => {
-      const sourceExists = nodeById.has(typeof link.source === 'string' ? link.source : link.source.id);
-      const targetExists = nodeById.has(typeof link.target === 'string' ? link.target : link.target.id);
+      const sourceExists = nodeById.has(typeof link.source === 'string' ? link.source : (link.source as any).id);
+      const targetExists = nodeById.has(typeof link.target === 'string' ? link.target : (link.target as any).id);
       return sourceExists && targetExists;
     });
 
@@ -168,7 +168,7 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
       .attr('stroke', '#fff')
       .attr('stroke-width', 3)
       .style('cursor', 'pointer')
-      .on('click', (event, d) => {
+      .on('click', (_event, d) => {
         setSelectedNode(d as Node);
       })
       .on('mouseover', function() {
@@ -300,7 +300,7 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
       ref={containerRef}
       className={`fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 ${isFullscreen ? 'p-0' : ''}`}
     >
-      <div className={`bg-slate-900 rounded-2xl border border-blue-500/20 w-full max-h-[90vh] overflow-hidden flex flex-col ${isFullscreen ? 'max-w-full max-h-full rounded-none' : 'max-w-6xl'}`}>
+      <div className={`bg-slate-900 rounded-2xl border border-blue-500/20 w-full h-[80vh] max-h-[90vh] overflow-hidden flex flex-col ${isFullscreen ? 'max-w-full h-screen max-h-full rounded-none' : 'max-w-6xl'}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-blue-500/20 bg-slate-900/95">
           <div>
@@ -321,17 +321,19 @@ export default function GraphVisualization({ sessionId, onClose }: Props) {
 
         {/* Graph Container */}
         <div className="flex-1 overflow-hidden relative bg-slate-950">
-          {loading ? (
+          {loading && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
                 <p className="text-slate-400">Loading graph data...</p>
               </div>
             </div>
-          ) : (
+          )}
+
+          <svg ref={svgRef} className={`w-full h-full ${loading ? 'hidden' : ''}`}></svg>
+          
+          {!loading && (
             <>
-              <svg ref={svgRef} className="w-full h-full"></svg>
-              
               {/* Controls - Top Right */}
               <div className="absolute top-4 right-4 flex flex-col gap-2">
                 <button

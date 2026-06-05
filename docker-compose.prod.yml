@@ -1,0 +1,70 @@
+# ============================================================================
+# Scientific Pathfinder — Production Docker Compose
+# ============================================================================
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d --build
+#
+# Requires these env vars (set in .env or shell):
+#   GROQ_API_KEY, NEO4J_URI, NEO4J_PASSWORD
+#   VITE_API_URL (the public URL where the API will be reachable)
+# ============================================================================
+
+services:
+  # ── Backend API ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./scientific_pathfinder
+      dockerfile: Dockerfile
+    container_name: sp-backend-prod
+    expose:
+      - "8000"
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://yourdomain.com}
+      NEO4J_URI: ${NEO4J_URI}
+      NEO4J_USERNAME: ${NEO4J_USERNAME:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      SEMANTIC_SCHOLAR_API_KEY: ${SEMANTIC_SCHOLAR_API_KEY:-}
+      API_KEY: ${API_KEY:-}
+      RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-60}
+    networks:
+      - sp-network
+    restart: always
+
+  # ── Frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./scientific_pathfinder_frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: sp-frontend-prod
+    expose:
+      - "80"
+    networks:
+      - sp-network
+    restart: always
+
+  # ── Reverse Proxy ───────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: sp-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - sp-network
+    restart: always
+
+networks:
+  sp-network:
+    driver: bridge

@@ -134,6 +134,7 @@ research_report_*.md
 !tsconfig.node.json
 !LICENSE.md
 !CONTRIBUTING.md
+!DEPLOYMENT.md
 
 # Database files
 *.db
