@@ -195,3 +195,4 @@ frontend/.vite/
 !DEPLOYMENT.md
 !FRONTEND_SETUP.md
 !API_FIX.md
+!scientific_pathfinder/tests/**

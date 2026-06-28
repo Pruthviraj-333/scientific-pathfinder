@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -18,14 +18,14 @@ from config import get_settings
 from src.logging_config import setup_logging, get_logger
 from src.database import db_manager
 from src.schemas import (
-    APIResponse, ResearchStartRequest, ResearchStartResponse,
-    GraphData, GraphNode, GraphLink, GraphClearResponse,
+    ResearchStartRequest, ResearchStartResponse,
+    GraphNode, GraphLink, GraphClearResponse,
     HealthCheckResponse, ServiceStatus,
     success_response, error_response,
 )
 from src.exceptions import (
-    AppException, ConfigurationError, DatabaseError,
-    SessionNotFoundError, ExternalServiceError,
+    AppException, DatabaseError,
+    SessionNotFoundError,
 )
 from src.middleware import (
     RequestIDMiddleware, SecurityHeadersMiddleware,
@@ -195,7 +195,6 @@ async def root():
 @app.get("/api/v1/health")
 async def health_check():
     """Comprehensive health check with dependency status."""
-    logger = get_logger(__name__)
     services = {}
 
     # Neo4j

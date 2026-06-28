@@ -11,7 +11,7 @@ All API responses follow a consistent envelope format:
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Generic, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 from pydantic import BaseModel, Field, field_validator
 
 T = TypeVar("T")

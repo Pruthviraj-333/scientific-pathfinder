@@ -114,7 +114,7 @@ class Neo4jGraphDB:
             
             # Check if it's an SSL certificate issue
             if 'ssl' in error_msg or 'certificate' in error_msg or 'cert' in error_msg:
-                logger.warning(f"⚠ SSL certificate verification failed, trying workaround...")
+                logger.warning("⚠ SSL certificate verification failed, trying workaround...")
                 
                 try:
                     # Convert to bolt:// (not bolt+s://) to allow custom SSL
@@ -139,8 +139,8 @@ class Neo4jGraphDB:
                     with self.driver.session() as session:
                         session.run("RETURN 1").consume()
                     
-                    logger.info(f"✓ Connected to Neo4j with SSL workaround")
-                    logger.info(f"  Note: Using unverified SSL (OK for development/Aura)")
+                    logger.info("✓ Connected to Neo4j with SSL workaround")
+                    logger.info("  Note: Using unverified SSL (OK for development/Aura)")
                     return True
                     
                 except Exception as ssl_error:
@@ -149,15 +149,15 @@ class Neo4jGraphDB:
                     return False
             else:
                 logger.error(f"✗ Failed to connect to Neo4j: {e}")
-                logger.error(f"   Troubleshooting:")
-                logger.error(f"   1. Check your Neo4j instance is running in Aura console")
-                logger.error(f"   2. Verify password is correct")
-                logger.error(f"   3. Try pausing and resuming the instance")
-            logger.error(f"   4. Check firewall/network connectivity")
+                logger.error("   Troubleshooting:")
+                logger.error("   1. Check your Neo4j instance is running in Aura console")
+                logger.error("   2. Verify password is correct")
+                logger.error("   3. Try pausing and resuming the instance")
+            logger.error("   4. Check firewall/network connectivity")
             return False
         except exceptions.AuthError as e:
             logger.error(f"✗ Neo4j authentication failed: {e}")
-            logger.error(f"   Check your NEO4J_USERNAME and NEO4J_PASSWORD in .env")
+            logger.error("   Check your NEO4J_USERNAME and NEO4J_PASSWORD in .env")
             return False
         except Exception as e:
             logger.error(f"✗ Unexpected error connecting to Neo4j: {e}")

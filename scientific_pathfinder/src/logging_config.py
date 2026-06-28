@@ -8,7 +8,6 @@ Supports two output formats:
 
 import logging
 import sys
-from typing import Optional
 from pythonjsonlogger import jsonlogger
 
 

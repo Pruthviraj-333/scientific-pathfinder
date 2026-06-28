@@ -13,12 +13,11 @@ from typing import Dict, Any
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from src.state import GraphState, StateUpdate, PaperMetadata, GraphEntity, ResearchGap
-from src.tools import SemanticScholarTool, format_paper_for_display, validate_paper_metadata
+from src.state import GraphState, StateUpdate, GraphEntity, ResearchGap
+from src.tools import SemanticScholarTool, validate_paper_metadata
 from src.graph_db import Neo4jGraphDB
 from prompts.system_prompts import (
     LIBRARIAN_SYSTEM_PROMPT,
-    CARTOGRAPHER_SYSTEM_PROMPT,
     SCIENTIST_SYSTEM_PROMPT,
     ENTITY_EXTRACTION_PROMPT_TEMPLATE,
     GAP_ANALYSIS_PROMPT_TEMPLATE,

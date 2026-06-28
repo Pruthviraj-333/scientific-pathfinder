@@ -13,7 +13,6 @@ from typing import Dict, Any
 
 from src.state import GraphState, create_initial_state
 from src.agents import LibrarianAgent, CartographerAgent, ScientistAgent
-from src.graph_db import get_neo4j_client
 from src.tools import CodeExecutor
 
 # Configure logging
@@ -171,7 +170,7 @@ class ScientificPathfinder:
         # Graph stats
         stats = state.get('graph_stats', {})
         if stats:
-            logger.info(f"🗺️  Graph statistics:")
+            logger.info("🗺️  Graph statistics:")
             logger.info(f"   - Papers: {stats.get('paper_count', 0)}")
             logger.info(f"   - Authors: {stats.get('author_count', 0)}")
             logger.info(f"   - Methods: {stats.get('method_count', 0)}")

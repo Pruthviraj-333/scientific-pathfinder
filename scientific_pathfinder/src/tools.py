@@ -141,14 +141,14 @@ class SemanticScholarTool:
         except requests.exceptions.RequestException as e:
             error_msg = str(e).lower()
             if '403' in error_msg or 'forbidden' in error_msg:
-                logger.error(f"✗ Semantic Scholar API key is invalid or not activated (403 Forbidden)")
-                logger.error(f"   Please check SEMANTIC_SCHOLAR_API_KEY in .env or clear it to use rate-limited public access.")
+                logger.error("✗ Semantic Scholar API key is invalid or not activated (403 Forbidden)")
+                logger.error("   Please check SEMANTIC_SCHOLAR_API_KEY in .env or clear it to use rate-limited public access.")
             elif '429' in error_msg or 'rate limit' in error_msg or 'exhausted retries' in error_msg:
-                logger.error(f"✗ Semantic Scholar rate limit exceeded")
-                logger.error(f"   Solutions:")
-                logger.error(f"   1. Wait 60 seconds and try again")
-                logger.error(f"   2. Add SEMANTIC_SCHOLAR_API_KEY to .env for higher limits")
-                logger.error(f"   3. Reduce max_papers in your query")
+                logger.error("✗ Semantic Scholar rate limit exceeded")
+                logger.error("   Solutions:")
+                logger.error("   1. Wait 60 seconds and try again")
+                logger.error("   2. Add SEMANTIC_SCHOLAR_API_KEY to .env for higher limits")
+                logger.error("   3. Reduce max_papers in your query")
             else:
                 logger.error(f"✗ API request failed: {e}")
             return []
@@ -324,7 +324,7 @@ class CodeExecutor:
                 f.write(code)
             logger.info(f"✓ Script saved to {output_path}")
             return str(output_path)
-        except Exception as e1:
+        except Exception:
             # Fallback to temp directory
             try:
                 temp_dir = pathlib.Path(tempfile.gettempdir())

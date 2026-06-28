@@ -5,7 +5,7 @@ FastAPI middleware for security, rate limiting, and request tracking.
 import time
 import uuid
 from collections import defaultdict
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
