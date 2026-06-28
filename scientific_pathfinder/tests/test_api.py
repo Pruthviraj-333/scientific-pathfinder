@@ -1,6 +1,3 @@
-from unittest.mock import patch
-import pytest
-
 
 def test_root_endpoint(test_client):
     """Test the root endpoint returns correct service details."""
